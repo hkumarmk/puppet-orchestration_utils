@@ -22,7 +22,7 @@ Puppet::Type.type(:consul_kv_blocker).provide(
         @value = Base64.decode64(JSON.parse(res.body)[0]['Value'])
       elsif res.code == '404'
       else
-        raise(Puppet::Error,"Uri: #{@uri.to_s}/#{key} reutrned invalid return code #{res.code}")
+        raise(Puppet::Error,"Uri: #{@uri.to_s}/#{key} returned invalid return code #{res.code}")
       end
     end
     return @value

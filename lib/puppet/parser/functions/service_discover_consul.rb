@@ -4,16 +4,16 @@ require 'json'
 
 module Puppet::Parser::Functions
   newfunction(
-  :service_discover_consul,
-  :type  => :rvalue,
-  :doc   => <<-'EOS'
+    :service_discover_consul,
+    :type  => :rvalue,
+    :doc   => <<-'EOS'
 
 Given the name of a service and optionally, a tag, this function
 returns a hash of the form:
   (name => ip_address)
 for each host that registered that service in consul
 
-  EOS
+EOS
   ) do |args|
     name = args.shift
     tag  = args.shift

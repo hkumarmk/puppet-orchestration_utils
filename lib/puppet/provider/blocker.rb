@@ -17,5 +17,4 @@ class Puppet::Provider::Blocker < Puppet::Provider
     end
     return false
   end
-
 end

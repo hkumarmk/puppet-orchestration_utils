@@ -2,7 +2,7 @@ Puppet::Type.newtype(:runtime_fail) do
 
   desc <<-'EOD'
   Fail the puppet execution on runtime. The problem with fail function is that
-, as funtions are evaluated on comple time, the execution will fail during that
+, as functions are evaluated on comple time, the execution will fail during that
 time, so if the condition evaluates a resource which create on the same
 role/node will cause the execution always fail as the puppet execution willl
 never happen.
@@ -13,7 +13,7 @@ never happen.
   end
 
   newparam(:fail) do
-    desc 'Wheter to fail or not'
+    desc 'Whether to fail or not'
     defaultto true
   end
 
@@ -24,6 +24,4 @@ never happen.
   validate do
     raise(Puppet::Error, 'Ready should not be set') unless self[:ready] == true
   end
-
-
 end

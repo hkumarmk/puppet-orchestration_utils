@@ -1,8 +1,8 @@
 module Puppet::Parser::Functions
-
-  Puppet::Parser::Functions.newfunction(:easy_host,
-                                      :type => :statement,
-                                      :doc => <<-'EOD'
+  newfunction(
+    :easy_host,
+    :type => :statement,
+    :doc => <<-'EOD'
   Accept hash of name and IP and add entries in /etc/hosts.
 
     easy_host({'node1.example.com' => '10.1.1.1',
@@ -14,7 +14,7 @@ module Puppet::Parser::Functions
   10.1.1.2  node2.example.com node2
   10.1.1.3  node3
 EOD
-) do |args|
+  ) do |args|
     raise(ArgumentError, 'Argument must be a hash') unless args[0].is_a?(Hash)
     args[0].each do |fqdn,ip|
       fqdn =~ /^([\w-]+)\.\S+/
