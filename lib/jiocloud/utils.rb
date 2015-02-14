@@ -1,3 +1,13 @@
+##
+# Collection of methods to do consul operations
+# The methods
+#   return nil if url is not accessible, this will make sure facter which use
+#     this code will not fail the puppet execution. (Do we need to handle all
+#     excepions, rather than raising puppet::error?)
+#   return true or data output if operations suceed
+#   return false if operations failed
+##
+
 require 'json'
 require 'net/http'
 require 'uri'
@@ -13,17 +23,19 @@ module Jiocloud::Utils
     @http = Net::HTTP.new(@uri.host, @uri.port)
   end
 
-  def get(url,ret='body')
+  def get(url)
     connect(url)
     path=@uri.request_uri
     req = Net::HTTP::Get.new(path)
-    res = @http.request(req)
+    begin
+      res = @http.request(req)
+    rescue
+      return nil
+    end
     if res.code == '200'
-      return JSON.parse(res.body) if ret == 'body'
-      return res.code if ret == 'code'
+      return JSON.parse(res.body)
     elsif res.code == '404'
-      return '' if ret == 'body'
-      return res.code if ret == 'code'
+      return ''
     else
       raise(Puppet::Error,"Uri: #{@uri.to_s} reutrned invalid return code #{res.code}")
     end
@@ -34,7 +46,11 @@ module Jiocloud::Utils
     path = @uri.request_uri
     req = Net::HTTP::Put.new(path)
     req.body = body
-    res = @http.request(req)
+    begin
+      res = @http.request(req)
+    rescue
+      return nil
+    end
     if res.code == '200'
       if res.body.empty?
         return true
@@ -50,7 +66,11 @@ module Jiocloud::Utils
     connect(url)
     path = @uri.request_uri
     req = Net::HTTP::Delete.new(path)
-    res = @http.request(req)
+    begin
+      res = @http.request(req)
+    rescue
+      return nil
+    end
     if res.code == '404'
       return false # The url doesnt exists
     elsif res.code == '200'
@@ -76,6 +96,8 @@ module Jiocloud::Utils
   def casSession(name,args={})
     if getSessionID(name) == ''
       createSession(name,args)
+    else
+      true
     end
   end
 
@@ -86,7 +108,11 @@ module Jiocloud::Utils
     body_hash['Node'] = args['node'] if args.key?('node')
     body_hash['Checks'] = args['node'] if args.key?('checks')
     body = body_hash.to_json
-    session = JSON.parse(put(sessionurl + '/create',body))
+    data = put(sessionurl + '/create',body)
+    if data.nil?
+      return nil
+    end
+    session = JSON.parse(data)
     if session.empty?
       return false
     else
@@ -96,6 +122,9 @@ module Jiocloud::Utils
 
   def getSessionID(name)
     sessions = get(sessionurl + '/list')
+    if sessions.nil?
+      return nil
+    end
     session = sessions.select {|session| session['Name'] == name}
     if session.empty?
       return ''
@@ -135,7 +164,9 @@ module Jiocloud::Utils
 
   def getKV(key)
     key = get(kvurl + '/' + key)
-    if key.empty?
+    if key.nil?
+      return nil
+    elsif key.empty?
       return ''
     else
       return Base64.decode64(key[0]['Value'])
