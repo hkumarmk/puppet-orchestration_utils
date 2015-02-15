@@ -121,6 +121,10 @@ module Jiocloud::Utils
   end
 
   def getSessionID(name)
+    return getSession(name)['ID']
+  end
+
+  def getSession(name)
     sessions = get(sessionurl + '/list')
     if sessions.nil?
       return nil
@@ -128,8 +132,10 @@ module Jiocloud::Utils
     session = sessions.select {|session| session['Name'] == name}
     if session.empty?
       return ''
+    elsif session.count > 1
+      raise(Puppet::Error,"Multiple matching (#{session.count}) Consul Sessions found for #{name}")
     else
-      return session[0]['ID']
+      return session[0]
     end
   end
 
