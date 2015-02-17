@@ -144,6 +144,50 @@ module Jiocloud::Utils
   end
 
   ##
+  # return the session belonging to specified node
+  ##
+  def getNodeSession(node)
+    sessions = get(sessionurl + '/node/' + node)
+    if sessions.nil?
+      return nil
+    end
+    return sessions
+  end
+
+  ##
+  # Get session blonging to specified node with specifiied name
+  ##
+  def getNodeSessionWithName(node,name)
+    sessions = get(sessionurl + '/node/' + node)
+    if sessions.nil?
+      return nil
+    end
+    session = sessions.select {|session| session['Name'] == name}
+    if session.empty?
+      return ''
+    elsif session.count > 1
+      raise(Puppet::Error,"Multiple matching (#{session.count}) Consul Sessions found for #{node, #{name}")
+    else
+      return session[0]
+    end
+  end
+
+
+  ##
+  # Return an array of session names belonging to the specified node
+  ##
+  def getNodeSessionName(node)
+    getNodeSession(node).inject([]){ |r,x| r << x.values_at('Name') }.flatten
+  end
+
+  ##
+  # Return array of session ids belonging to the specified node
+  ##
+  def getNodeSessionID(node)
+    getNodeSession(node).inject([]){ |r,x| r << x.values_at('ID') }.flatten
+  end
+
+  ##
   # There are more parameters Create kv can accept, but now only required
   # parameters for sessions are added.
   ##
