@@ -15,7 +15,7 @@ if ! sessions.nil?
     createKV(key,hostname,{:acquire => session})
     leader = true if createKV(key,hostname,{:acquire => session}) == true || (leader_name = getKvValue(key)) == hostname
 
-    Facter.add(:leader) do
+    Facter.add(:leader_node) do
       setcode do
         if leader
           hostname
