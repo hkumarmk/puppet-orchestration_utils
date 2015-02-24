@@ -1,76 +1,102 @@
-require 'json'
-require 'net/http'
-require 'uri'
-require 'base64'
+require 'jiocloud/utils'
+include Jiocloud::Utils
 Puppet::Type.type(:consul_kv).provide(
   :default,
 ) do
 
-  def connect(url)
-    @uri ||= URI(url)
-    @http ||= Net::HTTP.new(@uri.host, @uri.port)
+  def kvurl
+    resource[:url]
   end
 
-  ##
-  # Fetch the value for provided key and return its decoded value (Values of
-  # consul keys are base64 encoded).
-  ##
-  def getKey(url,key)
-    if ! @value
-      connect(url)
-      path=@uri.request_uri + '/'  + key
-      req = Net::HTTP::Get.new(path)
-      res = @http.request(req)
-      if res.code == '200'
-        data = JSON.parse(res.body)
-        @value = Base64.decode64(data[0]['Value'])
-      elsif res.code == '404'
-        @value = ''
-      else
-        raise(Puppet::Error,"Uri: #{@uri.to_s}/#{key} reutrned invalid return code #{res.code}")
+  def lockSession
+    @lock ||= getLockSession(resource[:name])
+    return @lock
+  end
+
+  def releaseSession
+    if resource[:release] == 'Yes'
+      session = lockSession
+      if session.nil? || session.empty?
+        return nil
       end
-    end
-    return @value
-  end
-
-  def putKey(url,key,value)
-    connect(url)
-    path = @uri.request_uri + '/' + key
-    req = Net::HTTP::Put.new(path)
-    req.body = value
-    res = @http.request(req)
-    if res.code != '200'
-      raise(Puppet::Error,"Uri: #{@uri.to_s}/#{key} reutrned invalid return code #{res.code}")
-    end
-  end
-
-  def delKey(url,key)
-    connect(url)
-    path = @uri.request_uri + '/' + key
-    req = Net::HTTP::Delete.new(path)
-    res = @http.request(req)
-    if res.code != '200'
-      raise(Puppet::Error,"Uri: #{@uri.to_s}/#{key} reutrned invalid return code #{res.code}")
+      getSessionName({:id => lockSession})
+    elsif resource[:release] == 'No' || resource[:release].nil?
+      return nil
+    else
+      resource[:release]
     end
   end
 
   def exists?
-    !getKey(resource[:url],resource[:name]).empty?
+    key = getKV(resource[:name])
+    key.nil? ? raise(Puppet::Error,"Failed to get data from consul") : ! key.empty?
   end
 
   def create
-    putKey(resource[:url],resource[:name],resource[:value])
+    createKV(resource[:name],resource[:value],
+      {
+        :flags   => resource[:flags],
+        :acquire => resource[:acquire],
+        :release => releaseSession,
+        :cas     => resource[:cas],
+        :node    => resource[:node],
+      }
+    )
   end
 
   def destroy
-    delKey(resource[:url],resource[:name])
+    deleteKV(resource[:name])
   end
 
   def value
-    getKey(resource[:url],resource[:name])
+    getKvValue(resource[:name])
   end
 
   def value=(value)
-    putKey(resource[:url],resource[:name],resource[:value])
+    create
   end
+
+  ##
+  # acquire getter method make sure that setter will not be called if there any
+  # lock already there - in fact since consul lock operation is idempotent
+  # itself, we could just do an acquire operation, but Im just not doing it as
+  # it will cause PUT (Write) operation everytime which I thought to be bit heavier than
+  # get.
+  ##
+  def acquire
+    lock = lockSession
+    if lock
+      return  resource[:acquire]
+    else
+      return false
+    end
+  end
+
+  def acquire=(value)
+    create
+  end
+
+  def release
+    lock = lockSession
+    # If release is no, then no action required
+    if resource[:release] == 'No'
+      return resource[:release]
+    # if release is yes, then lock to be released if its locked with any
+    # session.
+    elsif resource[:release] == 'Yes' && lock
+      return false
+    # If release is the session name, then it only need to be released if the
+    # lock is made on that session.
+    elsif lock == resource[:release]
+      return false
+    # No action in any other situation
+    else
+      return resource[:release]
+    end
+  end
+
+  def release=(value)
+    create
+  end
+
 end
