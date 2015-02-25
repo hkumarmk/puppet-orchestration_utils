@@ -62,6 +62,9 @@ Puppet::Type.type(:consul_kv).provide(
   # itself, we could just do an acquire operation, but Im just not doing it as
   # it will cause PUT (Write) operation everytime which I thought to be bit heavier than
   # get.
+  #
+  # TODO: The response for acquire should be noted and create a notice()
+  # if it see somebody else locked it. This is to have cleaner puppet reports.
   ##
   def acquire
     lock = lockSession
