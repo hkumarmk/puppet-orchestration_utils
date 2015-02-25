@@ -37,11 +37,21 @@ if ! sessions.nil?
     key =  "clusters/#{service}/leader"
 
     ##
+    # Check if the key is locked and if not, just lock it. This check is only to
+    # reduce PUT operations to consul as PUT can only be responded by consul
+    # leader where GETs can be responded by any consul server if consul
+    # configured appropriately.
     # leader is set if it is able to acquire the lock.
     # If somebody else acquire the lock, then set leader_name from the kv, else
     # set it as hostname.
     ##
-    leader = true if createKV(key,hostname,{:acquire => session}) == true || (leader_name = getKvValue(key)) == hostname
+    if getLockSession(key).empty?
+      lock = createKV(key,hostname,{:acquire => session})
+    else
+      lock = false
+    end
+
+    leader = true if lock == true || (leader_name = getKvValue(key)) == hostname
 
     ##
     # This fact can be used in the puppet code to get the leader node name.
