@@ -60,7 +60,7 @@ Puppet::Type.type(:consul_kv_mysql_slave_update).provide(
     puts "in create"
     master_data = masterdata
     mysql(defaults_file, '-NBe',"CHANGE MASTER TO
-            MASTER_HOST=\'#{Facter.value(:leader)}\',
+            MASTER_HOST=\'#{Facter.value(:leader_node)}\',
             MASTER_USER=\'#{resource[:repl_user]}\',
             MASTER_PASSWORD=\'#{resource[:repl_password]}\',
             MASTER_LOG_FILE=\'#{master_data[0]}\',
